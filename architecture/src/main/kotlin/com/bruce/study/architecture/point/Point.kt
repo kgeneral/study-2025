@@ -1,16 +1,16 @@
 package com.bruce.study.architecture.point
 
 import jakarta.persistence.*
+import jakarta.transaction.Transactional
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.repository.findByIdOrNull
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Repository
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import java.time.LocalDateTime
 import java.util.*
 
-data class PointEventRequest(val userId: Long, val point: Long)
+data class PointEventRequest(val point: Long)
 data class PointResponse(val userId: Long, val point: Long, val message: String)
 
 @Entity
@@ -38,9 +38,8 @@ class UserPoint(
 class PointEvent(
 
     @Id
-    @GeneratedValue
     @Column(name = "tx_id", nullable = false, updatable = false)
-    open var txId: UUID? = null,
+    open var txId: UUID? = UUID.randomUUID(),
 
     // todo is this relationship needed?
     @ManyToOne(fetch = FetchType.LAZY)
@@ -64,7 +63,52 @@ interface PointEventRepository : JpaRepository<PointEvent, UUID>
 @RestController
 class PointController(
     private val userPointRepository: UserPointRepository,
+    private val pointEventRepository: PointEventRepository
 ) {
+
+    @PostMapping(value = ["/user/{userId}/point"])
+    @Transactional
+    fun addPoint(
+        @PathVariable userId: Long,
+        @RequestBody request: PointEventRequest
+    ): ResponseEntity<PointResponse> {
+        if (request.point == 0L) {
+            return ResponseEntity.badRequest().body(
+                PointResponse(userId, 0, "Point value must not be zero")
+            )
+        }
+
+        // Fetch or create user point
+        val userPoint = userPointRepository.findByIdOrNull(userId)
+            ?: UserPoint(
+                userId = userId,
+                currentPoint = 0
+            )
+
+        // Calculate updated points
+        val updatedPoint = userPoint.currentPoint + request.point
+        if (updatedPoint < 0) {
+            return ResponseEntity.badRequest().body(
+                PointResponse(userId, userPoint.currentPoint, "Insufficient points")
+            )
+        }
+
+        // Update user's points
+        userPoint.currentPoint = updatedPoint
+        userPointRepository.save(userPoint)
+
+        // Log the point change event
+        val pointEvent = PointEvent(
+            userPoint = userPoint,
+            point = request.point
+        )
+        pointEventRepository.save(pointEvent)
+
+        return ResponseEntity.ok(
+            PointResponse(userId, userPoint.currentPoint, "User points updated successfully")
+        )
+    }
+
 
     @GetMapping(value = ["/user/{userId}/point"])
     fun getPoint(@PathVariable userId: Long): PointResponse {
