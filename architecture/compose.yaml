@@ -7,3 +7,8 @@ services:
       - 'POSTGRES_USER=myuser'
     ports:
       - '55432:5432'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.05'
+          memory: 128M
