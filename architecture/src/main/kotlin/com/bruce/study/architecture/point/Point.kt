@@ -3,6 +3,8 @@ package com.bruce.study.architecture.point
 import jakarta.persistence.*
 import jakarta.transaction.Transactional
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Repository
@@ -54,7 +56,12 @@ class PointEvent(
 )
 
 @Repository
-interface UserPointRepository : JpaRepository<UserPoint, Long>
+interface UserPointRepository : JpaRepository<UserPoint, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM UserPoint u WHERE u.userId = :userId")
+    fun findByIdWithLock(userId: Long): UserPoint?
+}
+
 
 @Repository
 interface PointEventRepository : JpaRepository<PointEvent, UUID>
@@ -79,11 +86,12 @@ class PointController(
         }
 
         // Fetch or create user point
-        val userPoint = userPointRepository.findByIdOrNull(userId)
+        val userPoint = userPointRepository.findByIdWithLock(userId)
             ?: UserPoint(
                 userId = userId,
                 currentPoint = 0
             )
+
 
         // Calculate updated points
         val updatedPoint = userPoint.currentPoint + request.point
