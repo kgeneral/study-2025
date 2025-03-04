@@ -6,6 +6,12 @@ plugins {
 	kotlin("plugin.jpa") version "1.9.25"
 }
 
+dependencyManagement {
+	imports {
+		mavenBom("io.opentelemetry.instrumentation:opentelemetry-instrumentation-bom:2.13.3")
+	}
+}
+
 group = "com.bruce.study"
 version = "0.0.1-SNAPSHOT"
 
@@ -26,6 +32,7 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.liquibase:liquibase-core")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
+	implementation("io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter")
 	testAndDevelopmentOnly("org.springframework.boot:spring-boot-devtools")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	runtimeOnly("org.postgresql:postgresql")

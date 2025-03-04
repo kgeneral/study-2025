@@ -24,3 +24,25 @@ logging:
   level:
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql: TRACE
+
+otel:
+  resource:
+    attributes: service.name=${spring.application.name},service.namespace=my-namespace
+
+  metrics:
+    exporter: otlp  # Prometheus 등으로 변경 가능
+    interval: 5000ms   # 메트릭 수집 주기
+    otlp:
+      endpoint: http://otel-collector:4317 # OpenTelemetry Collector 주소
+
+  tracing:
+    exporter: otlp     # Zipkin, Jaeger 또는 ConsoleExporter 등으로 변경 가능
+    sampler:
+      probability: 1.0 # 샘플링 확률 (1.0은 모든 요청을 추적)
+    otlp:
+      endpoint: http://otel-collector:4317 # OpenTelemetry Collector 주소
+
+  logs:
+    exporter: otlp  # 로그 전달 설정 (필요에 따라 설정)
+    otlp:
+      endpoint: http://otel-collector:4317 # OpenTelemetry Collector 주소
